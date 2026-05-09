@@ -65,10 +65,10 @@ export async function GET(request) {
         },
       },
     });
+    const eventSummaries = events.map((event) => ({ id: event.id, status: event.status }));
     console.log("[approvals:pending] fetch query results", {
       count: events.length,
-      eventIds: events.map((event) => event.id),
-      approvalStatus: events.map((event) => ({ id: event.id, status: event.status })),
+      events: eventSummaries,
     });
 
     return success({ events, count: events.length });

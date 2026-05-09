@@ -14,13 +14,15 @@ export function AuthProvider({ children }) {
     let isMounted = true;
 
     const initializeAuth = async () => {
+      let supabaseSessionUser = null;
       try {
         const supabase = createSupabaseClient();
         const { data, error } = await supabase.auth.getSession();
         if (error) {
           console.error("[auth] supabase session error", error);
         }
-        console.log("[auth] current session user", data?.session?.user || null);
+        supabaseSessionUser = data?.session?.user || null;
+        console.log("[auth] current session user", supabaseSessionUser);
       } catch (err) {
         console.error("[auth] failed to read supabase session", err);
       }
@@ -29,6 +31,11 @@ export function AuthProvider({ children }) {
       const storedUser = localStorage.getItem("diganta_user");
 
       if (!storedToken) {
+        if (supabaseSessionUser) {
+          console.warn("[auth] supabase session exists without local API token", {
+            supabaseUserId: supabaseSessionUser.id,
+          });
+        }
         if (isMounted) {
           setToken(null);
           setUser(null);
@@ -42,6 +49,7 @@ export function AuthProvider({ children }) {
         try {
           parsedStoredUser = JSON.parse(storedUser);
         } catch {
+          console.error("[auth] stored user JSON parse failed");
           localStorage.removeItem("diganta_user");
         }
       }

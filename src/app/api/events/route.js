@@ -75,11 +75,11 @@ export async function GET(request) {
       }),
       prisma.event.count({ where }),
     ]);
+    const eventSummaries = events.map((event) => ({ id: event.id, status: event.status }));
     console.log("[events:list] fetch query results", {
       count: events.length,
       total,
-      eventIds: events.map((event) => event.id),
-      approvalStatus: events.map((event) => ({ id: event.id, status: event.status })),
+      events: eventSummaries,
     });
 
     return success({

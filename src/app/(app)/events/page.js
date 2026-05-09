@@ -28,9 +28,11 @@ export default function EventsPage() {
       const data = await apiFetch(`/api/events?${params.toString()}`);
       const fetchedEvents = data?.events || [];
       setEvents(fetchedEvents);
-      console.log("[events] fetch query results", fetchedEvents);
-      console.log("[events] event IDs", fetchedEvents.map((event) => event.id));
-      console.log("[events] approval status", fetchedEvents.map((event) => ({ id: event.id, status: event.status })));
+      const eventSummaries = fetchedEvents.map((event) => ({ id: event.id, status: event.status }));
+      console.log("[events] fetch query results", {
+        count: fetchedEvents.length,
+        events: eventSummaries,
+      });
     } catch (err) {
       console.error("[events] fetch error", err);
     } finally {

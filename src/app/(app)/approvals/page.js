@@ -23,9 +23,11 @@ export default function ApprovalsPage() {
       const data = await apiFetch("/api/approvals/pending");
       const fetchedEvents = data?.events || [];
       setEvents(fetchedEvents);
-      console.log("[approvals] fetch query results", fetchedEvents);
-      console.log("[approvals] event IDs", fetchedEvents.map((event) => event.id));
-      console.log("[approvals] approval status", fetchedEvents.map((event) => ({ id: event.id, status: event.status })));
+      const eventSummaries = fetchedEvents.map((event) => ({ id: event.id, status: event.status }));
+      console.log("[approvals] fetch query results", {
+        count: fetchedEvents.length,
+        events: eventSummaries,
+      });
     } catch (err) {
       console.error("[approvals] fetch error", err);
     } finally {
