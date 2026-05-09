@@ -14,12 +14,16 @@ import {
 } from "@/lib/api";
 import { EVENT_STATUS, ROLES } from "@/lib/constants";
 
+export const dynamic = "force-dynamic";
+
 // ─── GET: List Events ───
 
 export async function GET(request) {
   try {
     const decoded = authenticate(request);
     if (!decoded) return unauthorized();
+    console.log("[events:list] current session user", decoded.userId);
+    console.log("[events:list] current role", decoded.role);
 
     const { searchParams } = new URL(request.url);
     const status = searchParams.get("status");
@@ -71,6 +75,12 @@ export async function GET(request) {
       }),
       prisma.event.count({ where }),
     ]);
+    console.log("[events:list] fetch query results", {
+      count: events.length,
+      total,
+      eventIds: events.map((event) => event.id),
+      approvalStatus: events.map((event) => ({ id: event.id, status: event.status })),
+    });
 
     return success({
       events,
@@ -82,7 +92,7 @@ export async function GET(request) {
       },
     });
   } catch (err) {
-    console.error("[events:list]", err);
+    console.error("[events:list] fetch error", err);
     return error("Internal server error", 500);
   }
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import { Calendar, Plus, Filter } from "lucide-react";
@@ -13,21 +13,38 @@ export default function EventsPage() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState({ status: "", eventType: "" });
 
-  useEffect(() => {
-    if (authLoading) return;
-    if (!user) { router.push("/login"); return; }
+  const fetchEvents = useCallback(async () => {
+    if (!user) return;
+
+    setLoading(true);
+    console.log("[events] current session user", user?.id || null);
+    console.log("[events] current role", user?.role || null);
 
     const params = new URLSearchParams();
     if (filter.status) params.set("status", filter.status);
     if (filter.eventType) params.set("eventType", filter.eventType);
 
-    apiFetch(`/api/events?${params.toString()}`)
-      .then((data) => setEvents(data.events))
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, [user, apiFetch, authLoading, router, filter]);
+    try {
+      const data = await apiFetch(`/api/events?${params.toString()}`);
+      const fetchedEvents = data?.events || [];
+      setEvents(fetchedEvents);
+      console.log("[events] fetch query results", fetchedEvents);
+      console.log("[events] event IDs", fetchedEvents.map((event) => event.id));
+      console.log("[events] approval status", fetchedEvents.map((event) => ({ id: event.id, status: event.status })));
+    } catch (err) {
+      console.error("[events] fetch error", err);
+    } finally {
+      setLoading(false);
+    }
+  }, [user, filter, apiFetch]);
 
-  if (authLoading || loading) {
+  useEffect(() => {
+    if (authLoading) return;
+    if (!user) { router.push("/login"); return; }
+    fetchEvents();
+  }, [user, authLoading, router, fetchEvents]);
+
+  if (authLoading || loading || !user) {
     return <div className="page-loader"><div className="spinner" /></div>;
   }
 
