@@ -7,13 +7,13 @@ import { ClipboardCheck } from "lucide-react";
 import { getStatusBadgeClass, getStatusLabel, formatDate, formatCurrency } from "@/lib/utils";
 
 export default function ApprovalsPage() {
-  const { user, apiFetch, loading: authLoading } = useAuth();
+  const { user, token, apiFetch, loading: authLoading } = useAuth();
   const router = useRouter();
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const fetchEvents = useCallback(async () => {
-    if (!user) return;
+    if (!user || !token) return;
 
     setLoading(true);
     console.log("[approvals] current session user", user?.id || null);
@@ -33,15 +33,16 @@ export default function ApprovalsPage() {
     } finally {
       setLoading(false);
     }
-  }, [user, apiFetch]);
+  }, [user, token, apiFetch]);
 
   useEffect(() => {
     if (authLoading) return;
     if (!user) { router.push("/login"); return; }
+    if (!token) return;
     fetchEvents();
-  }, [user, authLoading, router, apiFetch, fetchEvents]);
+  }, [user, token, authLoading, router, apiFetch, fetchEvents]);
 
-  if (authLoading || loading || !user) {
+  if (authLoading || loading || !user || !token) {
     return <div className="page-loader"><div className="spinner" /></div>;
   }
 

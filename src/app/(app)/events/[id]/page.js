@@ -12,7 +12,7 @@ import { getStatusBadgeClass, getStatusLabel, formatDate, formatDateTime, format
 
 export default function EventDetailPage({ params }) {
   const { id } = use(params);
-  const { user, apiFetch, loading: authLoading } = useAuth();
+  const { user, token, apiFetch, loading: authLoading } = useAuth();
   const router = useRouter();
   const { showToast, ToastComponent } = useToast();
   const [event, setEvent] = useState(null);
@@ -70,7 +70,7 @@ export default function EventDetailPage({ params }) {
   const [showResourceForm, setShowResourceForm] = useState(false);
 
   const fetchEvent = useCallback(async () => {
-    if (!user) return;
+    if (!user || !token) return;
 
     setLoading(true);
     setEventError("");
@@ -94,11 +94,12 @@ export default function EventDetailPage({ params }) {
     } finally {
       setLoading(false);
     }
-  }, [apiFetch, id, showToast, user]);
+  }, [apiFetch, id, showToast, user, token]);
 
   useEffect(() => {
     if (authLoading) return;
     if (!user) { router.push("/login"); return; }
+    if (!token) return;
 
     fetchEvent();
 
@@ -106,7 +107,7 @@ export default function EventDetailPage({ params }) {
     apiFetch("/api/clubs/my")
       .then((data) => setUserClubs(data.clubs || []))
       .catch((err) => console.error("[events:detail:page] clubs fetch error", err));
-  }, [id, user, authLoading, router, apiFetch, fetchEvent]);
+  }, [id, user, token, authLoading, router, apiFetch, fetchEvent]);
 
   const handleSubmitForApproval = async () => {
     setActionLoading(true);
@@ -283,7 +284,7 @@ export default function EventDetailPage({ params }) {
     );
   };
 
-  if (authLoading || loading || !user) {
+  if (authLoading || loading || !user || !token) {
     return <div className="page-loader"><div className="spinner" /></div>;
   }
 

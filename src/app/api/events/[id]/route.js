@@ -3,7 +3,7 @@
 // ─────────────────────────────────────────────
 
 import prisma from "@/lib/prisma";
-import { authenticate } from "@/lib/auth";
+import { authenticateStrict } from "@/lib/auth";
 import { success, error, unauthorized, notFound, forbidden } from "@/lib/api";
 import { EVENT_STATUS, ROLES } from "@/lib/constants";
 
@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
 
 export async function GET(request, { params }) {
   try {
-    const decoded = authenticate(request);
+    const decoded = await authenticateStrict(request);
     if (!decoded) return unauthorized();
 
     const { id } = await params;
