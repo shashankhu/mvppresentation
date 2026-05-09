@@ -106,14 +106,7 @@ export async function GET(request, { params }) {
       }
       // 4. Approver roles (faculty coordinator, principal) have access
       else if ([ROLES.FACULTY_COORDINATOR, ROLES.PRINCIPAL].includes(role)) hasAccess = true;
-      // 5. If it's a sub-event, members of the club that created it have access
-      else if (event.parentEventId && event.clubId) {
-        const membership = await prisma.clubMember.findUnique({
-          where: { userId_clubId: { userId, clubId: event.clubId } }
-        });
-        if (membership) hasAccess = true;
-      }
-      // 6. Club members have access if it's a club event
+      // 5. Club members have access to both club events and sub-events
       else if (event.clubId) {
         const membership = await prisma.clubMember.findUnique({
           where: { userId_clubId: { userId, clubId: event.clubId } }
