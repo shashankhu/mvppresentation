@@ -291,7 +291,7 @@ export default function EventDetailPage({ params }) {
     return (
       <div style={{ padding: "var(--space-6)", textAlign: "center" }}>
         <h2>Event not found</h2>
-        <p>{eventError || "The event you&apos;re looking for doesn&apos;t exist or you don&apos;t have permission to view it."}</p>
+        <p>{eventError || "The event you're looking for doesn't exist or you don't have permission to view it."}</p>
         <button className="btn btn-primary" onClick={() => router.push("/events")}>
           Back to Events
         </button>
