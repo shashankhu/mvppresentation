@@ -115,14 +115,15 @@ export async function GET(request, { params }) {
       }
 
       if (!hasAccess) {
+        const redactId = (value) => (typeof value === "string" ? `${value.slice(0, 6)}...` : null);
         console.error("[events:detail] access denied", {
-          userId,
+          userId: redactId(userId),
           role,
-          eventId: event.id,
+          eventId: redactId(event.id),
           eventType: event.eventType,
           eventStatus: event.status,
-          eventClubId: event.clubId,
-          createdById: event.createdById,
+          eventClubId: redactId(event.clubId),
+          createdById: redactId(event.createdById),
         });
         return forbidden("You do not have access to view this event's details");
       }

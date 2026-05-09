@@ -22,7 +22,7 @@ export function AuthProvider({ children }) {
           console.error("[auth] supabase session error", error);
         }
         supabaseSessionUser = data?.session?.user || null;
-        console.log("[auth] current session user", supabaseSessionUser);
+        console.log("[auth] current session user", supabaseSessionUser?.id || null);
       } catch (err) {
         console.error("[auth] failed to read supabase session", err);
       }
