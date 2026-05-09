@@ -1,28 +1,48 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import { ClipboardCheck } from "lucide-react";
 import { getStatusBadgeClass, getStatusLabel, formatDate, formatCurrency } from "@/lib/utils";
 
 export default function ApprovalsPage() {
-  const { user, apiFetch, loading: authLoading } = useAuth();
+  const { user, token, apiFetch, loading: authLoading } = useAuth();
   const router = useRouter();
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  const fetchEvents = useCallback(async () => {
+    if (!user || !token) return;
+
+    setLoading(true);
+    console.log("[approvals] current session user", user?.id || null);
+    console.log("[approvals] current role", user?.role || null);
+
+    try {
+      const data = await apiFetch("/api/approvals/pending");
+      const fetchedEvents = data?.events || [];
+      setEvents(fetchedEvents);
+      const eventSummaries = fetchedEvents.map((event) => ({ id: event.id, status: event.status }));
+      console.log("[approvals] fetch query results", {
+        count: fetchedEvents.length,
+        events: eventSummaries,
+      });
+    } catch (err) {
+      console.error("[approvals] fetch error", err);
+    } finally {
+      setLoading(false);
+    }
+  }, [user, token, apiFetch]);
+
   useEffect(() => {
     if (authLoading) return;
     if (!user) { router.push("/login"); return; }
+    if (!token) return;
+    fetchEvents();
+  }, [user, token, authLoading, router, apiFetch, fetchEvents]);
 
-    apiFetch("/api/approvals/pending")
-      .then((data) => setEvents(data.events || []))
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, [user, apiFetch, authLoading, router]);
-
-  if (authLoading || loading) {
+  if (authLoading || loading || !user || !token) {
     return <div className="page-loader"><div className="spinner" /></div>;
   }
 

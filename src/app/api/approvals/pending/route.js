@@ -3,13 +3,15 @@
 // ─────────────────────────────────────────────
 
 import prisma from "@/lib/prisma";
-import { authenticate } from "@/lib/auth";
+import { authenticateStrict } from "@/lib/auth";
 import { success, error, unauthorized, forbidden } from "@/lib/api";
 import { ROLES, EVENT_STATUS, APPROVER_ROLES } from "@/lib/constants";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(request) {
   try {
-    const decoded = authenticate(request);
+    const decoded = await authenticateStrict(request);
     if (!decoded) return unauthorized();
 
     if (!APPROVER_ROLES.includes(decoded.role)) {
@@ -24,8 +26,11 @@ export async function GET(request) {
     };
 
     const targetStatus = statusMap[decoded.role];
+    console.log("[approvals:pending] current session user", decoded.userId);
+    console.log("[approvals:pending] current role", decoded.role);
+    console.log("[approvals:pending] target approval status", targetStatus);
 
-    // Build where clause - for faculty coordinators, only show events from their assigned clubs
+    // Faculty is scoped to coordinated clubs; dean/principal/admin are not scoped by creator.
     let whereClause = { status: targetStatus };
 
     if (decoded.role === ROLES.FACULTY_COORDINATOR) {
@@ -60,10 +65,15 @@ export async function GET(request) {
         },
       },
     });
+    const eventSummaries = events.map((event) => ({ id: event.id, status: event.status }));
+    console.log("[approvals:pending] fetch query results", {
+      count: events.length,
+      events: eventSummaries,
+    });
 
     return success({ events, count: events.length });
   } catch (err) {
-    console.error("[approvals:pending]", err);
+    console.error("[approvals:pending] fetch error", err);
     return error("Internal server error", 500);
   }
 }

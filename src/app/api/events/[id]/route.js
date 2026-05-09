@@ -3,15 +3,22 @@
 // ─────────────────────────────────────────────
 
 import prisma from "@/lib/prisma";
-import { authenticate } from "@/lib/auth";
+import { authenticateStrict } from "@/lib/auth";
 import { success, error, unauthorized, notFound, forbidden } from "@/lib/api";
+import { EVENT_STATUS, ROLES } from "@/lib/constants";
+
+export const dynamic = "force-dynamic";
 
 export async function GET(request, { params }) {
   try {
-    const decoded = authenticate(request);
+    const decoded = await authenticateStrict(request);
     if (!decoded) return unauthorized();
 
     const { id } = await params;
+    const { role, userId } = decoded;
+    console.log("[events:detail] current session user", userId);
+    console.log("[events:detail] current role", role);
+    console.log("[events:detail] requested event id", id);
 
     const event = await prisma.event.findUnique({
       where: { id },
@@ -77,7 +84,7 @@ export async function GET(request, { params }) {
     });
 
     if (!event) {
-      console.error("[events:detail] Event not found for id:", id);
+      console.error("[events:detail] event not found", { id, userId, role });
       return notFound("Event not found");
     }
 
@@ -85,25 +92,22 @@ export async function GET(request, { params }) {
     // Standard events are public to all authenticated users
     if (event.eventType !== "standard") {
       let hasAccess = false;
-      const { role, userId } = decoded;
 
       // 1. Creator always has access
       if (event.createdById === userId) hasAccess = true;
       // 2. Admins and Deans always have access
-      else if (role === "admin" || role === "super_admin" || role === "dean") hasAccess = true;
+      else if (role === ROLES.ADMIN || role === "super_admin" || role === ROLES.DEAN) hasAccess = true;
       // 3. Department roles might have access to approved events
-      else if (["transport", "security", "resource", "finance"].includes(role) && event.status === "APPROVED") hasAccess = true;
-      // 4. Approver roles (faculty coordinator, principal) have access
-      else if (["faculty_coordinator", "principal"].includes(role)) hasAccess = true;
-      // 5. Club members have access if it's a club event
-      else if (event.clubId) {
-        const membership = await prisma.clubMember.findUnique({
-          where: { userId_clubId: { userId, clubId: event.clubId } }
-        });
-        if (membership) hasAccess = true;
+      else if (
+        [ROLES.TRANSPORT, ROLES.SECURITY, ROLES.RESOURCE, ROLES.FINANCE].includes(role) &&
+        event.status === EVENT_STATUS.APPROVED
+      ) {
+        hasAccess = true;
       }
-      // 6. If it's a sub-event, members of the club that created it have access
-      else if (event.parentEventId && event.clubId) {
+      // 4. Approver roles (faculty coordinator, principal) have access
+      else if ([ROLES.FACULTY_COORDINATOR, ROLES.PRINCIPAL].includes(role)) hasAccess = true;
+      // 5. Club-membership grants access when the event carries a clubId (club events and sub-events)
+      else if (event.clubId) {
         const membership = await prisma.clubMember.findUnique({
           where: { userId_clubId: { userId, clubId: event.clubId } }
         });
@@ -111,6 +115,16 @@ export async function GET(request, { params }) {
       }
 
       if (!hasAccess) {
+        const redactId = (value) => (typeof value === "string" ? `${value.slice(0, 6)}...` : null);
+        console.error("[events:detail] access denied", {
+          userId: redactId(userId),
+          role,
+          eventId: redactId(event.id),
+          eventType: event.eventType,
+          eventStatus: event.status,
+          eventClubId: redactId(event.clubId),
+          createdById: redactId(event.createdById),
+        });
         return forbidden("You do not have access to view this event's details");
       }
     }
@@ -139,7 +153,7 @@ export async function GET(request, { params }) {
       },
     });
   } catch (err) {
-    console.error("[events:detail]", err);
+    console.error("[events:detail] fetch error", err);
     return error("Internal server error", 500);
   }
 }

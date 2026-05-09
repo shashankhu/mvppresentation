@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, use } from "react";
+import { useState, useEffect, use, useCallback } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/components/Toast";
@@ -12,11 +12,12 @@ import { getStatusBadgeClass, getStatusLabel, formatDate, formatDateTime, format
 
 export default function EventDetailPage({ params }) {
   const { id } = use(params);
-  const { user, apiFetch, loading: authLoading } = useAuth();
+  const { user, token, apiFetch, loading: authLoading } = useAuth();
   const router = useRouter();
   const { showToast, ToastComponent } = useToast();
   const [event, setEvent] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [eventError, setEventError] = useState("");
   const [tab, setTab] = useState("overview");
   const [actionLoading, setActionLoading] = useState(false);
   const [comment, setComment] = useState("");
@@ -68,22 +69,45 @@ export default function EventDetailPage({ params }) {
   });
   const [showResourceForm, setShowResourceForm] = useState(false);
 
-  const fetchEvent = () => {
-    apiFetch(`/api/events/${id}`)
-      .then((data) => setEvent(data.event))
-      .catch(() => showToast("Failed to load event", "error"))
-      .finally(() => setLoading(false));
-  };
+  const fetchEvent = useCallback(async () => {
+    if (!user || !token) return;
+
+    setLoading(true);
+    setEventError("");
+    console.log("[events:detail:page] current session user", user?.id || null);
+    console.log("[events:detail:page] current role", user?.role || null);
+    console.log("[events:detail:page] requested event id", id);
+
+    try {
+      const data = await apiFetch(`/api/events/${id}`);
+      setEvent(data?.event || null);
+      console.log("[events:detail:page] fetch query results", {
+        eventId: data?.event?.id || null,
+        approvalStatus: data?.event?.status || null,
+      });
+    } catch (err) {
+      const message = err?.message || "Failed to load event";
+      console.error("[events:detail:page] fetch error", err);
+      setEvent(null);
+      setEventError(message);
+      showToast(message, "error");
+    } finally {
+      setLoading(false);
+    }
+  }, [apiFetch, id, showToast, user, token]);
 
   useEffect(() => {
     if (authLoading) return;
     if (!user) { router.push("/login"); return; }
+    if (!token) return;
+
     fetchEvent();
+
     // Fetch user's clubs for joining standard events
     apiFetch("/api/clubs/my")
       .then((data) => setUserClubs(data.clubs || []))
-      .catch(() => {});
-  }, [id, user, authLoading]);
+      .catch((err) => console.error("[events:detail:page] clubs fetch error", err));
+  }, [id, user, token, authLoading, router, apiFetch, fetchEvent]);
 
   const handleSubmitForApproval = async () => {
     setActionLoading(true);
@@ -260,7 +284,7 @@ export default function EventDetailPage({ params }) {
     );
   };
 
-  if (authLoading || loading) {
+  if (authLoading || loading || !user || !token) {
     return <div className="page-loader"><div className="spinner" /></div>;
   }
 
@@ -268,7 +292,7 @@ export default function EventDetailPage({ params }) {
     return (
       <div style={{ padding: "var(--space-6)", textAlign: "center" }}>
         <h2>Event not found</h2>
-        <p>The event you're looking for doesn't exist or you don't have permission to view it.</p>
+        <p>{eventError || "The event you're looking for doesn't exist or you don't have permission to view it."}</p>
         <button className="btn btn-primary" onClick={() => router.push("/events")}>
           Back to Events
         </button>
