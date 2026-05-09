@@ -44,7 +44,7 @@ export default function EventsPage() {
     if (authLoading) return;
     if (!user) { router.push("/login"); return; }
     fetchEvents();
-  }, [user, authLoading, router, fetchEvents]);
+  }, [user, authLoading, router, filter, fetchEvents]);
 
   if (authLoading || loading || !user) {
     return <div className="page-loader"><div className="spinner" /></div>;

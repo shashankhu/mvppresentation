@@ -39,7 +39,7 @@ export default function ApprovalsPage() {
     if (authLoading) return;
     if (!user) { router.push("/login"); return; }
     fetchEvents();
-  }, [user, authLoading, router, fetchEvents]);
+  }, [user, authLoading, router, apiFetch, fetchEvents]);
 
   if (authLoading || loading || !user) {
     return <div className="page-loader"><div className="spinner" /></div>;

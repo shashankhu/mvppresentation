@@ -48,8 +48,8 @@ export function AuthProvider({ children }) {
       if (storedUser) {
         try {
           parsedStoredUser = JSON.parse(storedUser);
-        } catch {
-          console.error("[auth] stored user JSON parse failed");
+        } catch (err) {
+          console.error("[auth] stored user JSON parse failed", err);
           localStorage.removeItem("diganta_user");
         }
       }
